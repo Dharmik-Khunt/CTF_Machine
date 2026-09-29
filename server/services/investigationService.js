@@ -1,14 +1,71 @@
+const fs = require("fs");
+const path = require("path");
 
 const caseService = require("./caseService");
 
-// Store demo progress in memory for now.
-// This resets when the backend restarts.
-const progress = {};
+const progressFile = path.join(
+  __dirname,
+  "../data/progress.json"
+);
 
-function getProgressKey(userId, caseId) {
-  return `${userId}:${caseId}`;
+// Read progress from JSON file
+function loadProgress() {
+  try {
+    if (!fs.existsSync(progressFile)) {
+      fs.writeFileSync(
+        progressFile,
+        JSON.stringify({ users: {} }, null, 2)
+      );
+    }
+
+    const data = fs.readFileSync(progressFile, "utf8");
+
+    return JSON.parse(data);
+  } catch (error) {
+    console.error("Unable to load progress:", error);
+
+    return {
+      users: {},
+    };
+  }
 }
 
+// Save progress to JSON file
+function saveProgress(progress) {
+  try {
+    fs.writeFileSync(
+      progressFile,
+      JSON.stringify(progress, null, 2)
+    );
+  } catch (error) {
+    console.error("Unable to save progress:", error);
+
+    throw error;
+  }
+}
+
+function createDefaultProgress() {
+  return {
+    attempts: 0,
+    hintsUsed: 0,
+    completed: false,
+    score: 0,
+  };
+}
+
+function getUserCaseProgress(progress, userId, caseId) {
+  if (!progress.users[userId]) {
+    progress.users[userId] = {};
+  }
+
+  if (!progress.users[userId][caseId]) {
+    progress.users[userId][caseId] = createDefaultProgress();
+  }
+
+  return progress.users[userId][caseId];
+}
+
+// Submit investigation answers
 function submitAnswers(userId, caseId, answers) {
   const caseData = caseService.getPrivateCaseById(caseId);
 
@@ -28,18 +85,13 @@ function submitAnswers(userId, caseId, answers) {
     };
   }
 
-  const key = getProgressKey(userId, caseId);
+  const progress = loadProgress();
 
-  if (!progress[key]) {
-    progress[key] = {
-      attempts: 0,
-      hintsUsed: 0,
-      completed: false,
-      score: 0,
-    };
-  }
-
-  const userProgress = progress[key];
+  const userProgress = getUserCaseProgress(
+    progress,
+    userId,
+    caseId
+  );
 
   if (userProgress.completed) {
     return {
@@ -84,6 +136,8 @@ function submitAnswers(userId, caseId, answers) {
     userProgress.completed = true;
     userProgress.score = score;
 
+    saveProgress(progress);
+
     return {
       success: true,
       completed: true,
@@ -94,14 +148,18 @@ function submitAnswers(userId, caseId, answers) {
     };
   }
 
+  saveProgress(progress);
+
   return {
     success: true,
     completed: false,
     results,
-    message: "Some answers are incorrect. Review the evidence and try again.",
+    message:
+      "Some answers are incorrect. Review the evidence and try again.",
   };
 }
 
+// Get progress for one case
 function getCaseProgress(userId, caseId) {
   const caseData = caseService.getPrivateCaseById(caseId);
 
@@ -109,16 +167,16 @@ function getCaseProgress(userId, caseId) {
     return null;
   }
 
-  const key = getProgressKey(userId, caseId);
+  const progress = loadProgress();
 
-  return progress[key] || {
-    attempts: 0,
-    hintsUsed: 0,
-    completed: false,
-    score: 0,
-  };
+  return getUserCaseProgress(
+    progress,
+    userId,
+    caseId
+  );
 }
 
+// Use a hint
 function useHint(userId, caseId) {
   const caseData = caseService.getPrivateCaseById(caseId);
 
@@ -130,18 +188,13 @@ function useHint(userId, caseId) {
     };
   }
 
-  const key = getProgressKey(userId, caseId);
+  const progress = loadProgress();
 
-  if (!progress[key]) {
-    progress[key] = {
-      attempts: 0,
-      hintsUsed: 0,
-      completed: false,
-      score: 0,
-    };
-  }
-
-  const userProgress = progress[key];
+  const userProgress = getUserCaseProgress(
+    progress,
+    userId,
+    caseId
+  );
 
   if (userProgress.completed) {
     return {
@@ -160,6 +213,8 @@ function useHint(userId, caseId) {
   }
 
   userProgress.hintsUsed += 1;
+
+  saveProgress(progress);
 
   return {
     success: true,

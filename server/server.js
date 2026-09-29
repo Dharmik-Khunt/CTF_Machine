@@ -3,7 +3,8 @@ const cors = require("cors");
 
 const caseRoutes = require("./routes/caseRoutes");
 const investigationRoutes = require("./routes/investigationRoutes");
-
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const alertRoutes = require("./routes/alertRoutes");
 const app = express();
 const PORT = 5000;
 
@@ -24,6 +25,12 @@ app.use("/api/cases", caseRoutes);
 
 // Investigation routes
 app.use("/api/investigation", investigationRoutes);
+
+// Dashboard routes
+app.use("/api/dashboard", dashboardRoutes);
+
+// Alert routes
+app.use("/api/alerts", alertRoutes);
 
 // Start server
 app.listen(PORT, () => {

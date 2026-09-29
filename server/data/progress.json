@@ -1,0 +1,26 @@
+{
+  "users": {
+    "analyst-02": {
+      "case-01": {
+        "attempts": 0,
+        "hintsUsed": 2,
+        "completed": false,
+        "score": 0
+      }
+    },
+    "analyst-01": {
+      "case-01": {
+        "attempts": 3,
+        "hintsUsed": 2,
+        "completed": true,
+        "score": 80
+      },
+      "case-02": {
+        "attempts": 0,
+        "hintsUsed": 1,
+        "completed": false,
+        "score": 0
+      }
+    }
+  }
+}
