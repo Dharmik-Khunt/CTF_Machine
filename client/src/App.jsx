@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
 import Investigation from "./pages/Investigation";
 import Alerts from "./pages/Alerts";
+import Flags from "./pages/Flags";
 import "./App.css";
 
 const pageTitles = {
@@ -66,6 +67,9 @@ function App() {
 }
 if (activePage === "alerts") {
   return <Alerts onInvestigate={investigateAlert} />;
+}
+if (activePage === "flags") {
+  return <Flags />;
 }
 
     return <PlaceholderPage title={pageTitles[activePage] || "Page"} />;

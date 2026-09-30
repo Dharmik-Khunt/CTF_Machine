@@ -1,21 +1,45 @@
-const alertData = require("../data/alerts");
+const alertsData = require("../data/alerts");
 
 function getAllAlerts() {
-  return alertData.getAllAlerts();
+  return alertsData.getAllAlerts();
 }
 
 function getAlertById(id) {
-  return alertData.getAlertById(id);
+  return alertsData.getAlertById(id) || null;
 }
 
 function getAlertsByCaseId(caseId) {
-  const alerts = alertData.getAllAlerts();
+  return getAllAlerts().filter(
+    (alert) => alert.caseId === caseId || alert.case_id === caseId
+  );
+}
 
-  return alerts.filter((alert) => alert.caseId === caseId);
+function updateAlertStatus(id, status) {
+  const alert = getAlertById(id);
+
+  if (!alert) {
+    return null;
+  }
+
+  const normalizedStatus = {
+    new: "NEW",
+    acknowledged: "ACKNOWLEDGED",
+    resolved: "RESOLVED",
+  }[String(status).toLowerCase()];
+
+  if (!normalizedStatus) {
+    return null;
+  }
+
+  alert.status = normalizedStatus;
+  alert.updatedAt = new Date().toISOString();
+
+  return alert;
 }
 
 module.exports = {
   getAllAlerts,
   getAlertById,
   getAlertsByCaseId,
+  updateAlertStatus,
 };

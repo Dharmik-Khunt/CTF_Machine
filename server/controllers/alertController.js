@@ -1,72 +1,64 @@
+
 const alertService = require("../services/alertService");
 
-// GET /api/alerts
 function getAllAlerts(req, res) {
   try {
-    const alerts = alertService.getAllAlerts();
-
-    return res.status(200).json({
-      success: true,
-      count: alerts.length,
-      alerts,
-    });
+    res.status(200).json(alertService.getAllAlerts());
   } catch (error) {
-    console.error("Alert retrieval error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to retrieve alerts.",
-    });
+    res.status(500).json({ message: "Unable to retrieve alerts." });
   }
 }
 
-// GET /api/alerts/:id
 function getAlertById(req, res) {
   try {
-    const { id } = req.params;
-
-    const alert = alertService.getAlertById(id);
+    const alert = alertService.getAlertById(req.params.id);
 
     if (!alert) {
-      return res.status(404).json({
-        success: false,
-        message: "Alert not found.",
+      return res.status(404).json({ message: "Alert not found." });
+    }
+
+    res.status(200).json(alert);
+  } catch (error) {
+    res.status(500).json({ message: "Unable to retrieve alert." });
+  }
+}
+
+function getAlertsByCaseId(req, res) {
+  try {
+    res.status(200).json(
+      alertService.getAlertsByCaseId(req.params.caseId)
+    );
+  } catch (error) {
+    res.status(500).json({ message: "Unable to retrieve case alerts." });
+  }
+}
+
+function updateAlertStatus(req, res) {
+  try {
+    const allowedStatuses = ["New", "Acknowledged", "Resolved"];
+    const { status } = req.body;
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Status must be New, Acknowledged, or Resolved.",
       });
     }
 
-    return res.status(200).json({
-      success: true,
+    const alert = alertService.updateAlertStatus(
+      req.params.id,
+      status
+    );
+
+    if (!alert) {
+      return res.status(404).json({ message: "Alert not found." });
+    }
+
+    res.status(200).json({
+      message: "Alert status updated.",
       alert,
     });
   } catch (error) {
-    console.error("Alert retrieval error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to retrieve alert.",
-    });
-  }
-}
-
-// GET /api/alerts/case/:caseId
-function getAlertsByCaseId(req, res) {
-  try {
-    const { caseId } = req.params;
-
-    const alerts = alertService.getAlertsByCaseId(caseId);
-
-    return res.status(200).json({
-      success: true,
-      count: alerts.length,
-      alerts,
-    });
-  } catch (error) {
-    console.error("Case alert retrieval error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to retrieve case alerts.",
-    });
+    res.status(500).json({ message: "Unable to update alert status." });
   }
 }
 
@@ -74,4 +66,5 @@ module.exports = {
   getAllAlerts,
   getAlertById,
   getAlertsByCaseId,
+  updateAlertStatus,
 };

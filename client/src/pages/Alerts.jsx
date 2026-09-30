@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   AlertTriangle, RefreshCw, Search, Eye
 } from "lucide-react";
-import { getAlerts } from "../services/api";
+import { getAlerts, updateAlertStatus } from "../services/api";
 
 function Alerts({ onInvestigate }) {
   const [alerts, setAlerts] = useState([]);
@@ -12,6 +12,8 @@ function Alerts({ onInvestigate }) {
   const [search, setSearch] = useState("");
   const [severity, setSeverity] = useState("All");
   const [selectedAlert, setSelectedAlert] = useState(null);
+  const [updating, setUpdating] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
 
   async function loadAlerts() {
     try {
@@ -25,6 +27,34 @@ function Alerts({ onInvestigate }) {
       setLoading(false);
     }
   }
+  async function changeStatus(status) {
+  if (!selectedAlert) return;
+
+  try {
+    setUpdating(true);
+    setActionMessage("");
+
+    const response = await updateAlertStatus(
+      selectedAlert.id,
+      status
+    );
+
+    const updatedAlert = response.alert;
+
+    setAlerts((previous) =>
+      previous.map((alert) =>
+        alert.id === updatedAlert.id ? updatedAlert : alert
+      )
+    );
+
+    setSelectedAlert(updatedAlert);
+    setActionMessage(`Alert status changed to ${status}.`);
+  } catch (err) {
+    setActionMessage(err.message || "Status update failed.");
+  } finally {
+    setUpdating(false);
+  }
+}
 
   useEffect(() => {
     loadAlerts();
@@ -222,6 +252,27 @@ function Alerts({ onInvestigate }) {
       >
         Investigate Related Case
       </button>
+      <div className="alert-status-actions">
+  <button
+    className="secondary-button"
+    disabled={updating || selectedAlert.status === "Acknowledged"}
+    onClick={() => changeStatus("Acknowledged")}
+  >
+    Acknowledge
+  </button>
+
+  <button
+    className="resolve-button"
+    disabled={updating || selectedAlert.status === "Resolved"}
+    onClick={() => changeStatus("Resolved")}
+  >
+    Resolve
+  </button>
+</div>
+
+{actionMessage && (
+  <p className="status-action-message">{actionMessage}</p>
+)}
     </div>
   </div>
 )}

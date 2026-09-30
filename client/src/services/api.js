@@ -62,3 +62,23 @@ export async function requestCaseHint(caseId, userId) {
   }
   return data;
 }
+
+
+export async function updateAlertStatus(alertId, status) {
+  const response = await fetch(
+    `${API_BASE_URL}/alerts/${encodeURIComponent(alertId)}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Unable to update alert status.");
+  }
+
+  return data;
+}
