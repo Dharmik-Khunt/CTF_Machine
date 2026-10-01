@@ -1396,3 +1396,161 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Reports page */
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.report-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.report-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.report-metric strong {
+  font-size: 27px;
+  color: var(--text-main);
+}
+
+.report-metric span {
+  font-size: 12px;
+}
+
+.report-progress-panel,
+.report-case-panel {
+  margin-bottom: 18px;
+}
+
+.report-progress-panel h2,
+.report-case-panel h2 {
+  margin: 0 0 17px;
+  font-size: 16px;
+}
+
+.report-progress-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #25344a;
+}
+
+.report-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
+.report-progress-panel p {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+.report-status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.report-status.done {
+  background: #12352f;
+  color: #4ade80;
+}
+
+.report-status.pending {
+  background: #263449;
+  color: #cbd5e1;
+}
+
+@media (max-width: 1000px) {
+  .report-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .report-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-actions {
+    width: 100%;
+  }
+}
+
+
+/* Print layout for reports */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .sidebar,
+  .header,
+  .report-actions,
+  .back-button {
+    display: none !important;
+  }
+
+  .main-area {
+    margin-left: 0 !important;
+  }
+
+  .page-content {
+    padding: 0 !important;
+  }
+
+  .panel {
+    background: white !important;
+    color: black !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .page-title,
+  .report-metric strong,
+  .report-case-panel h2,
+  .report-progress-panel h2,
+  .data-table td,
+  .data-table th {
+    color: black !important;
+  }
+
+  .muted {
+    color: #555 !important;
+  }
+
+  .report-progress-track {
+    border: 1px solid #aaa;
+    background: #eee !important;
+  }
+
+  .report-progress-fill {
+    background: #777 !important;
+  }
+
+  .data-table th {
+    background: #eee !important;
+  }
+
+  .report-status {
+    border: 1px solid #aaa;
+    background: white !important;
+    color: black !important;
+  }
+}

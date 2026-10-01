@@ -1,455 +1,223 @@
 
-import { useEffect, useState } from "react";
-import {
-  FileText,
-  Download,
-  AlertTriangle,
-  CheckCircle,
-} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { getDashboard } from "../services/api";
+import { RefreshCw, Printer, Download } from "lucide-react";
 
-import {
-  getDashboard,
-  getAlerts,
-} from "../services/api";
+const USER_ID = "analyst-01";
 
-function Reports() {
-  const [dashboard, setDashboard] = useState(null);
-  const [alerts, setAlerts] = useState([]);
-
+export default function Reports() {
+  const [summary, setSummary] = useState(null);
+  const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadReportData();
-  }, []);
+  const loadReport = async () => {
+    setLoading(true);
+    setError("");
 
-  async function loadReportData() {
     try {
-      setLoading(true);
-      setError("");
+      const response = await getDashboard(USER_ID);
 
-      const [dashboardResponse, alertsResponse] =
-        await Promise.all([
-          getDashboard(),
-          getAlerts(),
-        ]);
+      // Backend response: { success: true, dashboard: { summary, cases } }
+      const dashboard = response?.dashboard;
 
-      console.log(
-        "Dashboard report response:",
-        dashboardResponse
-      );
-
-      console.log(
-        "Alerts report response:",
-        alertsResponse
-      );
-
-      // Dashboard
-      if (dashboardResponse?.dashboard) {
-        setDashboard(dashboardResponse.dashboard);
-      } else {
-        setDashboard(dashboardResponse);
+      if (!dashboard) {
+        throw new Error("Dashboard data was not found in the API response.");
       }
 
-      // Alerts
-      if (Array.isArray(alertsResponse)) {
-        setAlerts(alertsResponse);
-      } else if (Array.isArray(alertsResponse?.alerts)) {
-        setAlerts(alertsResponse.alerts);
-      } else {
-        setAlerts([]);
-      }
-
+      setSummary(dashboard.summary || null);
+      setCases(Array.isArray(dashboard.cases) ? dashboard.cases : []);
     } catch (err) {
-      console.error(
-        "Failed to load report data:",
-        err
-      );
-
-      setError(
-        "Unable to load incident report data."
-      );
+      console.error("Report loading error:", err);
+      setError(err.message || "Unable to load report data.");
+      setSummary(null);
+      setCases([]);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  function downloadReport() {
-    const report = {
-      reportType: "SOC Defensive CTF Incident Report",
-      generatedAt: new Date().toISOString(),
+  useEffect(() => {
+    loadReport();
+  }, []);
 
-      dashboard: dashboard,
+  const completion =
+    summary && summary.totalCases > 0
+      ? Math.round(
+          (summary.completedCases / summary.totalCases) * 100
+        )
+      : 0;
 
-      alerts: alerts,
+  const exportReport = () => {
+    if (!summary) return;
 
-      summary: {
-        totalAlerts: alerts.length,
+    const lines = [
+      "SOC DEFENSIVE CTF - ACTIVITY REPORT",
+      "===================================",
+      "",
+      `Completion: ${completion}%`,
+      `Completed: ${summary.completedCases} of ${summary.totalCases}`,
+      `Remaining: ${summary.remainingCases}`,
+      `Total Attempts: ${summary.totalAttempts}`,
+      `Hints Used: ${summary.totalHints}`,
+      `Flags Captured: ${summary.flagsCaptured}`,
+      `Total Score: ${summary.totalScore}`,
+      `Maximum Score: ${summary.maximumScore}`,
+      "",
+      "CASE PERFORMANCE",
+      "----------------",
+      ...cases.map(
+        (item) =>
+          `${item.title} | ${
+            item.completed ? "Completed" : "Not completed"
+          } | Score: ${item.score} | Attempts: ${item.attempts} | Hints: ${item.hintsUsed}`
+      ),
+    ];
 
-        criticalAlerts: alerts.filter(
-          (alert) =>
-            String(alert.severity || "").toLowerCase() ===
-            "critical"
-        ).length,
-
-        highAlerts: alerts.filter(
-          (alert) =>
-            String(alert.severity || "").toLowerCase() ===
-            "high"
-        ).length,
-
-        mediumAlerts: alerts.filter(
-          (alert) =>
-            String(alert.severity || "").toLowerCase() ===
-            "medium"
-        ).length,
-
-        lowAlerts: alerts.filter(
-          (alert) =>
-            String(alert.severity || "").toLowerCase() ===
-            "low"
-        ).length,
-
-        resolvedAlerts: alerts.filter(
-          (alert) =>
-            String(alert.status || "").toLowerCase() ===
-            "resolved"
-        ).length,
-      },
-    };
-
-    const jsonData = JSON.stringify(
-      report,
-      null,
-      2
-    );
-
-    const blob = new Blob(
-      [jsonData],
-      {
-        type: "application/json",
-      }
-    );
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/plain;charset=utf-8",
+    });
 
     const url = URL.createObjectURL(blob);
-
     const link = document.createElement("a");
-
     link.href = url;
-    link.download = `soc-incident-report-${Date.now()}.json`;
-
-    document.body.appendChild(link);
-
+    link.download = "ctf-activity-report.txt";
     link.click();
-
-    document.body.removeChild(link);
-
     URL.revokeObjectURL(url);
-  }
-
-  const totalAlerts = alerts.length;
-
-  const criticalAlerts = alerts.filter(
-    (alert) =>
-      String(alert.severity || "").toLowerCase() ===
-      "critical"
-  ).length;
-
-  const highAlerts = alerts.filter(
-    (alert) =>
-      String(alert.severity || "").toLowerCase() ===
-      "high"
-  ).length;
-
-  const resolvedAlerts = alerts.filter(
-    (alert) =>
-      String(alert.status || "").toLowerCase() ===
-      "resolved"
-  ).length;
+  };
 
   if (loading) {
     return (
-      <div className="panel">
-        <h2>Incident Reports</h2>
-
-        <p className="muted">
-          Loading incident report data...
-        </p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="panel">
-        <h2>Incident Reports</h2>
-
-        <div className="error-message">
-          {error}
-        </div>
-
-        <button
-          className="primary-button"
-          onClick={loadReportData}
-        >
-          Try Again
-        </button>
+      <div className="page-content">
+        <h1 className="page-title">Reports</h1>
+        <p className="muted">Loading your CTF activity...</p>
       </div>
     );
   }
 
   return (
-    <div className="reports-page">
-
-      {/* HEADER */}
-      <div className="page-heading">
-
+    <div className="page-content">
+      <div className="page-heading-row">
         <div>
-          <h2>Incident Reports</h2>
-
-          <p className="muted">
-            Review the security activity and investigation
-            results from the SOC CTF lab.
+          <h1 className="page-title">Reports</h1>
+          <p className="page-subtitle">
+            Review your defensive CTF activity and case outcomes.
           </p>
         </div>
 
-        <button
-          className="primary-button"
-          onClick={downloadReport}
-        >
-          <Download size={17} />
-          Download Report
-        </button>
-
+        <div className="report-actions">
+          <button className="secondary-button" onClick={loadReport}>
+            <RefreshCw size={16} /> Refresh
+          </button>
+          <button
+            className="secondary-button"
+            onClick={() => window.print()}
+          >
+            <Printer size={16} /> Print
+          </button>
+          <button
+            className="primary-button"
+            onClick={exportReport}
+            disabled={!summary}
+          >
+            <Download size={16} /> Export
+          </button>
+        </div>
       </div>
 
-      {/* REPORT SUMMARY */}
-      <div className="alert-summary">
-
-        <div className="summary-card">
-          <span>Total Alerts</span>
-          <strong>{totalAlerts}</strong>
+      {error && (
+        <div className="panel">
+          <p className="error-message">{error}</p>
+          <button className="secondary-button" onClick={loadReport}>
+            Try again
+          </button>
         </div>
+      )}
 
-        <div className="summary-card">
-          <span>Critical</span>
-          <strong>{criticalAlerts}</strong>
-        </div>
-
-        <div className="summary-card">
-          <span>High</span>
-          <strong>{highAlerts}</strong>
-        </div>
-
-        <div className="summary-card">
-          <span>Resolved</span>
-          <strong>{resolvedAlerts}</strong>
-        </div>
-
-      </div>
-
-      {/* INCIDENT OVERVIEW */}
-      <div className="panel">
-
-        <div className="section-heading">
-
-          <div>
-            <FileText size={20} />
-
-            <div>
-              <h3>Incident Overview</h3>
-
-              <p className="muted">
-                Summary of the simulated SOC environment.
-              </p>
-            </div>
-          </div>
-
-        </div>
-
-        {dashboard ? (
-          <div className="report-grid">
-
-            <div className="report-item">
-              <span>Cases</span>
-
-              <strong>
-                {dashboard.totalCases ??
-                  dashboard.cases ??
-                  dashboard.caseCount ??
-                  0}
-              </strong>
+      {!error && summary && (
+        <>
+          <div className="report-summary-grid">
+            <div className="report-metric">
+              <span>Completion</span>
+              <strong>{completion}%</strong>
+              <small>
+                {summary.completedCases} of {summary.totalCases} cases
+              </small>
             </div>
 
-            <div className="report-item">
-              <span>Completed Cases</span>
-
-              <strong>
-                {dashboard.completedCases ??
-                  dashboard.completed ??
-                  0}
-              </strong>
+            <div className="report-metric">
+              <span>Total Attempts</span>
+              <strong>{summary.totalAttempts}</strong>
             </div>
 
-            <div className="report-item">
+            <div className="report-metric">
+              <span>Hints Used</span>
+              <strong>{summary.totalHints}</strong>
+            </div>
+
+            <div className="report-metric">
               <span>Total Score</span>
-
-              <strong>
-                {dashboard.totalScore ??
-                  dashboard.score ??
-                  0}
-              </strong>
-            </div>
-
-            <div className="report-item">
-              <span>Alerts</span>
-
-              <strong>{totalAlerts}</strong>
-            </div>
-
-          </div>
-        ) : (
-          <p className="muted">
-            No dashboard data available.
-          </p>
-        )}
-
-      </div>
-
-      {/* ALERT BREAKDOWN */}
-      <div className="panel">
-
-        <div className="section-heading">
-
-          <div>
-            <AlertTriangle size={20} />
-
-            <div>
-              <h3>Alert Breakdown</h3>
-
-              <p className="muted">
-                Current simulated security detections.
-              </p>
+              <strong>{summary.totalScore}</strong>
+              <small>of {summary.maximumScore}</small>
             </div>
           </div>
 
-        </div>
-
-        {alerts.length === 0 ? (
-          <div className="empty-state">
-            <AlertTriangle size={32} />
-
-            <h3>No security alerts</h3>
-
+          <section className="panel">
+            <h2 className="panel-title">Overall Progress</h2>
             <p className="muted">
-              No alerts are currently available.
+              {summary.completedCases} completed · {summary.remainingCases}{" "}
+              remaining
             </p>
-          </div>
-        ) : (
-          <div className="table-container">
+            <div className="report-progress-track">
+              <div
+                className="report-progress-fill"
+                style={{ width: `${completion}%` }}
+              />
+            </div>
+          </section>
 
-            <table className="alerts-table">
+          <section className="panel">
+            <h2 className="panel-title">Case Performance</h2>
 
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>SEVERITY</th>
-                  <th>TITLE</th>
-                  <th>SOURCE</th>
-                  <th>STATUS</th>
-                </tr>
-              </thead>
-
-              <tbody>
-
-                {alerts.map((alert) => (
-
-                  <tr key={alert.id}>
-
-                    <td>
-                      <strong>
-                        {alert.id || "N/A"}
-                      </strong>
-                    </td>
-
-                    <td>
-                      {alert.severity || "Info"}
-                    </td>
-
-                    <td>
-                      {alert.title ||
-                        alert.name ||
-                        "Security Detection"}
-                    </td>
-
-                    <td>
-                      {alert.source ||
-                        alert.sourceIp ||
-                        "Unknown"}
-                    </td>
-
-                    <td>
-                      {String(
-                        alert.status || "New"
-                      ).toLowerCase() ===
-                      "resolved" ? (
-                        <span className="report-status resolved">
-                          <CheckCircle size={14} />
-                          Resolved
-                        </span>
-                      ) : (
-                        <span className="report-status">
-                          {alert.status || "New"}
-                        </span>
-                      )}
-                    </td>
-
-                  </tr>
-
-                ))}
-
-              </tbody>
-
-            </table>
-
-          </div>
-        )}
-
-      </div>
-
-      {/* REPORT INFORMATION */}
-      <div className="panel">
-
-        <h3>Report Information</h3>
-
-        <div className="report-info">
-
-          <p>
-            <strong>Environment:</strong>{" "}
-            SOC Defensive CTF Training Lab
-          </p>
-
-          <p>
-            <strong>Report Type:</strong>{" "}
-            Simulated Incident Report
-          </p>
-
-          <p>
-            <strong>Data Source:</strong>{" "}
-            Local CTF simulation backend
-          </p>
-
-          <p>
-            <strong>Generated:</strong>{" "}
-            {new Date().toLocaleString()}
-          </p>
-
-        </div>
-
-      </div>
-
+            {cases.length === 0 ? (
+              <p className="muted">No case data available.</p>
+            ) : (
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Case</th>
+                      <th>Status</th>
+                      <th>Score</th>
+                      <th>Attempts</th>
+                      <th>Hints</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cases.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.title}</td>
+                        <td>
+                          <span
+                            className={`report-status ${
+                              item.completed ? "completed" : "pending"
+                            }`}
+                          >
+                            {item.completed ? "Completed" : "In progress"}
+                          </span>
+                        </td>
+                        <td>{item.score}</td>
+                        <td>{item.attempts}</td>
+                        <td>{item.hintsUsed}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </div>
   );
 }
-
-export default Reports;

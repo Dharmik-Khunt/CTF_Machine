@@ -7,6 +7,7 @@ import Cases from "./pages/Cases";
 import Investigation from "./pages/Investigation";
 import Alerts from "./pages/Alerts";
 import Flags from "./pages/Flags";
+import Reports from "./pages/Reports";
 import "./App.css";
 
 const pageTitles = {
@@ -70,6 +71,9 @@ if (activePage === "alerts") {
 }
 if (activePage === "flags") {
   return <Flags />;
+}
+if (activePage === "reports") {
+  return <Reports />;
 }
 
     return <PlaceholderPage title={pageTitles[activePage] || "Page"} />;
