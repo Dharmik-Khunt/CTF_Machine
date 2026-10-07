@@ -17,6 +17,12 @@
       },
       "case-02": {
         "attempts": 0,
+        "hintsUsed": 2,
+        "completed": false,
+        "score": 0
+      },
+      "case-03": {
+        "attempts": 0,
         "hintsUsed": 1,
         "completed": false,
         "score": 0
